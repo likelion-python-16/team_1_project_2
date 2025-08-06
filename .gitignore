@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.p~  
+*.log
+
+# Byte-compiled / optimized / DLL files
+*.so
+
+# Django
+db.sqlite3
+*.sqlite3
+media/
+staticfiles/
+local_settings.py
+
+# Migrations
+**/migrations/
+!**/migrations/__init__.py
+
+# Virtual Environment
+venv/
+.env
+.env.*
+
+# macOS
+.DS_Store
+
+# VSCode (IDE 환경 무시)
+.vscode/
+
+# Pip dependency files
+pip-log.txt
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Pytest
+.pytest_cache/
