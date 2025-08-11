@@ -1,7 +1,8 @@
-__pycache__/
-*.pyc
-venv/
 .env
 *.env
 .env.*
+OPENAI_API_KEY.env
+__pycache__/
+*.pyc
+venv/
 db.sqlite3
