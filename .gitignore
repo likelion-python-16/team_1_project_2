@@ -1,14 +1,7 @@
 __pycache__/
 *.pyc
-*.pyo
-*.sqlite3
 venv/
 .env
-AIA_webscanner.py.env
 *.env
 .env.*
-OPENAI_API_KEY.env
-__pycache__/
-*.pyc
-venv/
 db.sqlite3
