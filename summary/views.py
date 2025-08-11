@@ -1,60 +1,114 @@
-from rest_framework.decorators import api_view
+
+from datetime import date, datetime
+from typing import List
+
+from django.db.models.functions import TruncDate
+from django.db.models import Count
+from django.http import JsonResponse
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
-from django.conf import settings
-from openai import OpenAI
-import json, re
 
-# OpenAI 클라이언트 생성 (키는 settings.py에서 .env로 불러옴)
-client = OpenAI(api_key=settings.OPENAI_API_KEY)
+from .models import User, DiaryEntry, DailySummary
+from .serializers import DiaryEntrySerializer, DailySummarySerializer, UserSerializer
+from .utils import get_or_create_user, attach_uid_cookie
+from .services.openai_service import summarize
 
-def call_openai(entries):
-    """
-    entries: [{"text": "...", "emotion": "..."}, ...]
-    -> GPT에 프롬프트로 보내서 요약 JSON 반환
-    """
-    # 프롬프트 구성
-    lines = ["다음은 오늘 하루 동안의 감정 기록입니다:"]
-    for e in entries:
-        emo = e.get("emotion", "기타")
-        txt = e.get("text", "")
-        lines.append(f"- ({emo}) {txt}")
-    lines.append("")
-    lines.append("이 기록들을 바탕으로 오늘 하루의 감정을 요약하고, 대표 감정 하나와 추천 아이템 2개를 제안해주세요.")
-    lines.append("결과는 아래 JSON 형식으로 주세요:")
-    lines.append('{"summary_text":"...", "emotion":"...", "recommended_items":["...","..."]}')
-
-    prompt = "\n".join(lines)
-
-    # GPT 호출
-    resp = client.chat.completions.create(
-        model="gpt-4o-mini",  # 비용 적은 모델 (원하면 gpt-4o로 변경 가능)
-        temperature=0.7,
-        messages=[
-            {"role": "system", "content": "너는 한국어로 정갈한 감정 요약을 작성하는 어시스턴트다."},
-            {"role": "user", "content": prompt}
-        ],
-    )
-
-    # 응답 텍스트 추출
-    content = resp.choices[0].message.content
-
-    # JSON만 추출
-    json_str = re.search(r"\{.*\}", content, re.S)
-    return json.loads(json_str.group(0)) if json_str else {"raw": content}
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def whoami(request):
+    user = get_or_create_user(request)
+    data = UserSerializer(user).data
+    resp = Response(data, status=200)
+    attach_uid_cookie(resp, user)
+    return resp
 
 @api_view(["POST"])
-def generate_summary(request):
-    """
-    POST /api/summary/generate/
-    body: { "entries": [ {"text":"...", "emotion":"..."}, ... ] }
-    """
-    try:
-        entries = request.data.get("entries", [])
-        if not isinstance(entries, list) or not entries:
-            return Response({"detail": "entries(list)가 필요합니다."}, status=status.HTTP_400_BAD_REQUEST)
+@permission_classes([AllowAny])
+def create_entry(request):
+    user = get_or_create_user(request)
+    payload = request.data.copy()
+    payload["user"] = str(user.id)
+    ser = DiaryEntrySerializer(data=payload)
+    if ser.is_valid():
+        entry = ser.save()
+        resp = Response(DiaryEntrySerializer(entry).data, status=status.HTTP_201_CREATED)
+        attach_uid_cookie(resp, user)
+        return resp
+    return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        result = call_openai(entries)
-        return Response(result, status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def list_entries(request):
+    user = get_or_create_user(request)
+    d_str = request.GET.get("date")
+    qs = DiaryEntry.objects.filter(user=user)
+    if d_str:
+        try:
+            target = date.fromisoformat(d_str)
+            qs = qs.filter(timestamp__date=target)
+        except ValueError:
+            return Response({"detail": "Invalid date. Use YYYY-MM-DD."}, status=400)
+    data = DiaryEntrySerializer(qs.order_by("-timestamp"), many=True).data
+    resp = Response(data, status=200)
+    attach_uid_cookie(resp, user)
+    return resp
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def list_days(request):
+    user = get_or_create_user(request)
+    qs = (DiaryEntry.objects
+          .filter(user=user)
+          .annotate(day=TruncDate("timestamp"))
+          .values("day")
+          .annotate(count=Count("id"))
+          .order_by("-day"))
+    resp = Response(list(qs), status=200)
+    attach_uid_cookie(resp, user)
+    return resp
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def generate_summary(request):
+    user = get_or_create_user(request)
+    d_str = request.data.get("date")
+    if not d_str:
+        d = date.today()
+    else:
+        try:
+            d = date.fromisoformat(d_str)
+        except ValueError:
+            return Response({"detail": "Invalid date. Use YYYY-MM-DD."}, status=400)
+    entries = DiaryEntry.objects.filter(user=user, timestamp__date=d).order_by("timestamp")
+    texts: List[str] = [e.content for e in entries]
+    summary_text, emotion, items = summarize(texts, d)
+    obj, created = DailySummary.objects.update_or_create(
+        user=user, date=d,
+        defaults={"summary_text": summary_text, "emotion": emotion, "recommended_items": items},
+    )
+    data = DailySummarySerializer(obj).data
+    resp = Response(data, status=200)
+    attach_uid_cookie(resp, user)
+    return resp
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def get_summary(request):
+    user = get_or_create_user(request)
+    d_str = request.GET.get("date")
+    if not d_str:
+        return Response({"detail": "date query param required"}, status=400)
+    try:
+        d = date.fromisoformat(d_str)
+    except ValueError:
+        return Response({"detail": "Invalid date. Use YYYY-MM-DD."}, status=400)
+    try:
+        obj = DailySummary.objects.get(user=user, date=d)
+    except DailySummary.DoesNotExist:
+        return Response({"detail": "Not found"}, status=404)
+    data = DailySummarySerializer(obj).data
+    resp = Response(data, status=200)
+    attach_uid_cookie(resp, user)
+    return resp

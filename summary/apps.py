@@ -1,5 +1,7 @@
+
 from django.apps import AppConfig
 
-class GptSummaryConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'gpt_summary'
+class SummaryConfig(AppConfig):
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "summary"
+    verbose_name = "One-line Diary & Daily Summary"
