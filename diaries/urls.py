@@ -3,9 +3,9 @@ from rest_framework.routers import DefaultRouter
 from .views import DiaryEntryViewSet, DiaryEntryCreateView
 
 router = DefaultRouter()
-router.register(r'', DiaryEntryViewSet, basename='diary')
+router.register(r'diaries', DiaryEntryViewSet, basename='diary')
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('entries/', DiaryEntryCreateView.as_view(), name='diary-entry-create'),
+    path('diaries/create/', DiaryEntryCreateView.as_view(), name='diary-create'),
 ]

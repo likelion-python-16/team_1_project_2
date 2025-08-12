@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
+from rest_framework import generics
 
 from .models import DiaryEntry
 from .serializers import DiaryEntrySerializer
@@ -71,3 +72,13 @@ class DiaryEntryViewSet(viewsets.ModelViewSet):
         serializer.save(user=user)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class DiaryEntryCreateView(generics.CreateAPIView):
+    queryset = DiaryEntry.objects.all()
+    serializer_class = DiaryEntrySerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        user_uuid = self.request.data.get('user_uuid')
+        user = User.objects.get(uuid=user_uuid)  # 예외처리 필요
+        serializer.save(user=user)

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>홈</title>
+</head>
+<body>
+    <h1>환영합니다!</h1>
+    {% if user.is_authenticated %}
+        <p>{{ user.username }} 님, 로그인되었습니다.</p>
+        <a href="{% url 'account_logout' %}">로그아웃</a>
+    {% else %}
+        <a href="{% url 'account_login' %}">로그인</a>
+    {% endif %}
+</body>
+</html>

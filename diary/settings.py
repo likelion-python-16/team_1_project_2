@@ -37,17 +37,24 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    # Third-party apps
     'rest_framework',
+    'rest_framework.authtoken',
     'drf_yasg',
-    'users',
-    'diaries',
-    'summaries',
+    'drf_spectacular',
     'dj_rest_auth',
-    'dj_rest_auth.registration',  # 소셜 로그인 시 필요
+    'dj_rest_auth.registration', # 소셜 로그인 시 필요
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
-    # 'allauth.socialaccount.providers.google',  # 사용하려는 SNS에 따라 추가 (예: 구글)
+     # 'allauth.socialaccount.providers.google',  # 사용하려는 SNS에 따라 추가 (예: 구글)
+
+    # Local apps
+    'users',
+    'diaries',
+    'summaries',
+   
 ]
 
 AUTH_USER_MODEL = 'users.User'
@@ -72,6 +79,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'diary.urls'
@@ -79,10 +87,11 @@ ROOT_URLCONF = 'diary.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
@@ -104,6 +113,7 @@ DATABASES = {
     }
 }
 
+LOGIN_REDIRECT_URL = '/'  # 로그인 후 홈으로 이동
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -166,4 +176,18 @@ REST_FRAMEWORK = {
     # 페이지네이션 설정
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,  # 한 페이지에 보여줄 항목 수
+    
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+# Swagger(drf-yasg) 설정
+SWAGGER_SETTINGS = {
+    'USE_SESSION_AUTH': False,
+    'SECURITY_DEFINITIONS': {
+        'basic': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+        }
+    },
 }
