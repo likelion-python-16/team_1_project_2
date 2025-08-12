@@ -21,7 +21,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    "rest_framework", "corsheaders", "diaryrewriting"
+    "rest_framework", "corsheaders", "diaryrewriting",
+    "user",
 ]
 
 MIDDLEWARE = [
@@ -40,7 +41,7 @@ ROOT_URLCONF = 'AI.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -95,3 +96,27 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOW_ALL_ORIGINS = True
+
+KAKAO_REST_API_KEY = '8bf5434045cb3bb897dc831cd4f3c655'
+KAKAO_REDIRECT_URI = 'http://localhost:8000/user/login/callback/'
+
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+
+CORS_ALLOW_ALL_ORIGINS = True
+
+# ✅ Django REST Framework 설정 (옵션)
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
+
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+}
