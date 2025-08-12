@@ -16,5 +16,5 @@ class DiaryEntrySerializer(serializers.ModelSerializer):
 class DailySummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = DailySummary
-        fields = ["id", "user", "date", "summary_text", "emotion", "recommended_items"]
+        fields = ["id", "user", "date", "summary_text", "emotion", "recommended_items", "diary_text"]
         read_only_fields = ["id"]

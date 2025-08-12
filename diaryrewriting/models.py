@@ -23,9 +23,14 @@ class DiaryEntry(models.Model):
 class DailySummary(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="summaries")
     date = models.DateField()
-    summary_text = models.TextField()
-    emotion = models.CharField(max_length=50)
+    # Concise 1~2 sentence summary of the day
+    summary_text = models.TextField(blank=True)
+    # Representative emotion word
+    emotion = models.CharField(max_length=50, blank=True)
+    # Up to two product/content recommendations
     recommended_items = models.JSONField(null=True, blank=True)
+    # Full ghostwritten diary text (the main deliverable)
+    diary_text = models.TextField(null=True, blank=True)
 
     class Meta:
         unique_together = ("user", "date")

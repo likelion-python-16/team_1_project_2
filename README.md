@@ -1,24 +1,23 @@
 
-# Summary (One-line Diary) – Drop-in Django App
+# diaryrewriting – Drop-in Django App (Ghostwritten Daily Diary)
 
-This folder contains a reusable Django app `summary` providing APIs to store one-line diary entries and generate a daily emotional summary using OpenAI.
+Reusable Django app `diaryrewriting` that stores one-line entries and generates a ghostwritten daily diary using OpenAI.
 
-## Install (drop-in)
+## Install
 
-1) Copy the `summary` folder into your Django project root (next to your project package).
+1) Copy the `diaryrewriting/` folder into your Django project root.
 2) Install deps:
    ```bash
    pip install -r requirements.txt
    ```
-3) Add to settings.py:
+3) Update settings.py:
    ```python
-   INSTALLED_APPS += ["rest_framework", "corsheaders", "summary"]
+   INSTALLED_APPS += ["rest_framework", "corsheaders", "diaryrewriting"]
    MIDDLEWARE = ["corsheaders.middleware.CorsMiddleware"] + MIDDLEWARE
-   CORS_ALLOW_ALL_ORIGINS = True  # for dev
-   # Load .env if you want:
-   from pathlib import Path
-   import os
+   CORS_ALLOW_ALL_ORIGINS = True  # dev only
+   # load .env (optional)
    from dotenv import load_dotenv
+   import os
    load_dotenv(os.path.join(BASE_DIR, ".env"))
    ```
 4) Wire URLs (project urls.py):
@@ -26,7 +25,7 @@ This folder contains a reusable Django app `summary` providing APIs to store one
    from django.urls import path, include
    urlpatterns = [
        # ...
-       path("api/summary/", include("summary.urls")),
+       path("api/diary/", include("diaryrewriting.urls")),
    ]
    ```
 5) Migrate:
@@ -34,21 +33,19 @@ This folder contains a reusable Django app `summary` providing APIs to store one
    python manage.py migrate
    ```
 
-## .env
-Copy `.env.example` to `.env` and set your `OPENAI_API_KEY`. Optionally override `OPENAI_MODEL`.
+## API
 
-## API (quick)
+- `GET  /api/diary/whoami/`
+- `POST /api/diary/entries/create/`  `{content, emotion?, lat?, lng?}`
+- `GET  /api/diary/entries/?date=YYYY-MM-DD`
+- `GET  /api/diary/days/`
+- `POST /api/diary/generate/` or `/api/diary/generate_diary/` `{date?: YYYY-MM-DD}`
+- `GET  /api/diary/summaries/?date=YYYY-MM-DD`
+- `GET  /api/diary/diaries/?date=YYYY-MM-DD`  → returns only `{date, diary_text}`
 
-- `GET  /api/summary/whoami/` → returns a UUID user, also sets `uid` cookie
-- `POST /api/summary/entries/create/` with JSON `{content, emotion?, lat?, lng?}`
-- `GET  /api/summary/entries/?date=YYYY-MM-DD` → list entries for a day (or all if omitted)
-- `GET  /api/summary/days/` → list days with counts
-- `POST /api/summary/generate/` with JSON `{date?: YYYY-MM-DD}` → create/update summary for that date
-- `GET  /api/summary/summaries/?date=YYYY-MM-DD` → get stored summary
-
-Client can also pass `X-User-Id: <uuid>` header to control the user identity. Otherwise a new UUID is created and set via `uid` cookie.
+Client can pass `X-User-Id: <uuid>` header to fix identity, or rely on the `uid` cookie set by responses.
 
 ## Notes
-- The OpenAI call is minimal and robust to slightly messy JSON by best-effort parsing.
-- You can swap the model via env var `OPENAI_MODEL`.
-- For prod, tighten CORS and add auth as needed.
+- Model `DailySummary` includes `diary_text` (main ghostwritten diary), plus short `summary_text` and `emotion`.
+- OpenAI model defaults to `gpt-4o-mini` (override via `OPENAI_MODEL`).
+- Harden CORS/auth before production.

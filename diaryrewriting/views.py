@@ -1,10 +1,9 @@
 
-from datetime import date, datetime
+from datetime import date
 from typing import List
 
 from django.db.models.functions import TruncDate
 from django.db.models import Count
-from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -83,15 +82,26 @@ def generate_summary(request):
             return Response({"detail": "Invalid date. Use YYYY-MM-DD."}, status=400)
     entries = DiaryEntry.objects.filter(user=user, timestamp__date=d).order_by("timestamp")
     texts: List[str] = [e.content for e in entries]
-    summary_text, emotion, items = summarize(texts, d)
+    summary_text, emotion, items, diary_text = summarize(texts, d)
     obj, created = DailySummary.objects.update_or_create(
         user=user, date=d,
-        defaults={"summary_text": summary_text, "emotion": emotion, "recommended_items": items},
+        defaults={
+            "summary_text": summary_text,
+            "emotion": emotion,
+            "recommended_items": items,
+            "diary_text": diary_text,
+        },
     )
     data = DailySummarySerializer(obj).data
     resp = Response(data, status=200)
     attach_uid_cookie(resp, user)
     return resp
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def generate_diary(request):
+    # alias for generate_summary, more semantic for FE
+    return generate_summary(request)
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -110,5 +120,24 @@ def get_summary(request):
         return Response({"detail": "Not found"}, status=404)
     data = DailySummarySerializer(obj).data
     resp = Response(data, status=200)
+    attach_uid_cookie(resp, user)
+    return resp
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def get_diary(request):
+    user = get_or_create_user(request)
+    d_str = request.GET.get("date")
+    if not d_str:
+        return Response({"detail": "date query param required"}, status=400)
+    try:
+        d = date.fromisoformat(d_str)
+    except ValueError:
+        return Response({"detail": "Invalid date. Use YYYY-MM-DD."}, status=400)
+    try:
+        obj = DailySummary.objects.get(user=user, date=d)
+    except DailySummary.DoesNotExist:
+        return Response({"detail": "Not found"}, status=404)
+    resp = Response({"date": str(d), "diary_text": obj.diary_text or ""}, status=200)
     attach_uid_cookie(resp, user)
     return resp

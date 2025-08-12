@@ -17,4 +17,4 @@ class DiaryEntryAdmin(admin.ModelAdmin):
 class DailySummaryAdmin(admin.ModelAdmin):
     list_display = ("id", "user", "date", "emotion")
     list_filter = ("emotion", "date")
-    search_fields = ("summary_text",)
+    search_fields = ("summary_text", "diary_text")
