@@ -123,22 +123,64 @@
       window.location.reload();
     }
 
+// const token = localStorage.getItem("access_token");
+// if (token) {
+//   fetch("/api/me/", {
+//     headers: {
+//       "Authorization": "Bearer " + token
+//     }
+//   })
+//   .then(res => res.json())
+//   .then(user => {
+//     document.getElementById("customer-name").innerText = user.username;
+//   });
+// }
+// const token = localStorage.getItem("access_token");
+// if (!token) {
+//     alert("로그인 먼저 해주세요.");
+//     window.location.href = "/login/";
+// } else {
+//     fetch("/api/me/", {
+//         headers: { "Authorization": "Bearer " + token }
+//     })
+//     .then(r => r.json())
+//     .then(user => {
+//         document.getElementById("customer-name").value = user.username;
+//     })
+//     .catch(() => {
+//         alert("인증 실패. 다시 로그인 해주세요.");
+//         window.location.href = "/login/";
+//     });
+// }
 const token = localStorage.getItem("access_token");
-if (token) {
-  fetch("/api/me/", {
-    headers: {
-      "Authorization": "Bearer " + token
-    }
-  })
-  .then(res => res.json())
-  .then(user => {
-    document.getElementById("customer-name").innerText = user.username;
-  });
+if (!token) {
+    alert("로그인 먼저 해주세요.");
+    window.location.href = "/login/";
+} else {
+    fetch("/api/me/", {
+        headers: {
+            "Authorization": "Bearer " + token
+        }
+    })
+    .then(res => {
+        if (!res.ok) throw new Error("인증 실패");
+        return res.json();
+    })
+    .then(user => {
+        // 고객명 표시
+        const customerNameElem = document.getElementById("customer-name");
+        if (customerNameElem) {
+            customerNameElem.innerText = user.username;
+        }
+    })
+    .catch(() => {
+        alert("인증 실패. 다시 로그인 해주세요.");
+        window.location.href = "/login/";
+    });
 }
-
     document.getElementById("pay-btn").addEventListener("click", function(){
       const orderId = "order_" + Date.now();
-      const orderName = "{{ order_name }}";
+        const orderName = "{{ order_name }}";
       const customerName = "{{ customer_name }}";
       const amount = Number("{{ amount }}");
       const agree = document.getElementById("agree").checked;
