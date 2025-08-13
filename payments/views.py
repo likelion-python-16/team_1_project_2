@@ -7,7 +7,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.serializers import ModelSerializer
 from rest_framework.views import APIView
-
+from rest_framework.permissions import IsAuthenticated
 from users.serializers import RegisterSerializer
 
 # Register API (JWT not required)
@@ -31,14 +31,11 @@ def login_page(request):
     return render(request, "login.html")
 
 def payment_page(request):
-    # return render(request, "payment_page.html", context={"toss_client_key": settings.TOSS_CLIENT_KEY})
     return render(request, "payment_page.html", {
-        "customer_name": "홍길동",
         "order_name": "일일 다이어리",
         "amount": 10000,
-        "toss_client_key": settings.TOSS_CLIENT_KEY,  # 여기에 추가
+        "toss_client_key": settings.TOSS_CLIENT_KEY,
     })
-
 def success_page(request):
     return render(request, "success.html")
 

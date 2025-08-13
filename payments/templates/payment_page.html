@@ -98,9 +98,9 @@
     <div id="user-info" style="margin-bottom:10px;"></div>
     <div id="payment-messages"></div>
 
-    <p><strong>고객명:</strong> {{ customer_name }}</p>
-    <p><strong>주문명:</strong> {{ order_name }}</p>
-    <p><strong>결제 금액:</strong> {{ amount }}원</p>
+    <p><strong>고객명</strong>: <span id="customer-name"></span></p>
+    <p><strong>주문명:</strong> <span id="order-name">{{ order_name }}</span></p>
+    <p><strong>결제 금액:</strong> <span id="amount">{{ amount }}</span>원</p>
 
     <label><input type="checkbox" id="agree" /> 이용약관 동의</label><br>
     <button id="pay-btn">결제하기</button>
@@ -123,19 +123,18 @@
       window.location.reload();
     }
 
-    const token = localStorage.getItem("access_token");
-    if (!token) {
-      alert("로그인 먼저 해주세요.");
-      window.location.href = "/login/";
-    } else {
-      fetch("/api/me/", {
-        headers: {
-          "Authorization": "Bearer " + token
-        }
-      }).then(r => r.json()).then(user => {
-        document.getElementById("user-info").innerText = `로그인된 사용자: ${user.username}`;
-      });
+const token = localStorage.getItem("access_token");
+if (token) {
+  fetch("/api/me/", {
+    headers: {
+      "Authorization": "Bearer " + token
     }
+  })
+  .then(res => res.json())
+  .then(user => {
+    document.getElementById("customer-name").innerText = user.username;
+  });
+}
 
     document.getElementById("pay-btn").addEventListener("click", function(){
       const orderId = "order_" + Date.now();
