@@ -6,12 +6,13 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
 
 
+
 DEBUG = True
 
 ALLOWED_HOSTS = []
 
 
-
+#    "rest_framework_simplejwt","payments","users" 세줄 추가
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -37,6 +38,22 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'AI.urls'
+
+# main 원본
+# TEMPLATES = [
+#     {
+#         'BACKEND': 'django.template.backends.django.DjangoTemplates',
+#         'DIRS': [],
+#         'APP_DIRS': True,
+#         'OPTIONS': {
+#             'context_processors': [
+#                 'django.template.context_processors.request',
+#                 'django.contrib.auth.context_processors.auth',
+#                 'django.contrib.messages.context_processors.messages',
+#             ],
+#         },
+#     },
+# ]
 
 TEMPLATES = [
     {
@@ -101,6 +118,7 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOW_ALL_ORIGINS = True
 
+# 이하 추가된 라인
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
     "rest_framework_simplejwt.authentication.JWTAuthentication",
