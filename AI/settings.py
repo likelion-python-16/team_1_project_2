@@ -2,10 +2,8 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(os.path.join(BASE_DIR, ".env"))
-
-
-SECRET_KEY = 'django-insecure-4g7m=^6-ng8l-sp@waaz+$v5fbq4ayg6-o24vxmn7g79pixk8i'
+load_dotenv()
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 
 DEBUG = True
@@ -21,7 +19,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    "rest_framework", "corsheaders", "diaryrewriting"
+    "rest_framework", "corsheaders", "diaryrewriting",
+    "rest_framework_simplejwt",
+    "payments",
+    "users",
 ]
 
 MIDDLEWARE = [
@@ -40,13 +41,17 @@ ROOT_URLCONF = 'AI.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        "DIRS": [BASE_DIR / "payments" / "templates"],  # payments/templates 폴더 경로
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                "django.template.context_processors.debug",
+                "django.template.context_processors.media",
+                "django.template.context_processors.static",
+                "django.template.context_processors.tz",
             ],
         },
     },
@@ -95,3 +100,19 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOW_ALL_ORIGINS = True
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+    "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.AllowAny",),
+}
+
+from datetime import timedelta
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
+    "REFRESH_TOKEN_LIFETIME": timedelta(minutes=60),
+}
+
+TOSS_SECRET_KEY = os.getenv("TOSS_SECRET_KEY")
+TOSS_CLIENT_KEY = os.getenv("TOSS_CLIENT_KEY")
