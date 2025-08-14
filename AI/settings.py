@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     "rest_framework", "corsheaders", "diaryrewriting",
+    'rest_framework_simplejwt',
     "user",
     "summary",
     "payments"
@@ -32,6 +33,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -106,10 +108,15 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
 CORS_ALLOW_ALL_ORIGINS = True
 
-# ✅ Django REST Framework 설정 (옵션)
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+]
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+         'rest_framework.authentication.SessionAuthentication', 
     ),
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
@@ -125,3 +132,11 @@ SIMPLE_JWT = {
 
 TOSS_SECRET_KEY="test_sk_kYG57Eba3GP5JWOGj7PzVpWDOxmA"
 TOSS_CLIENT_KEY="test_ck_XZYkKL4MrjqXO7DRLGdmV0zJwlEW"
+
+
+STATIC_URL = '/static/'
+
+# 정적 파일 기본 디렉토리 경로 (전역 static 폴더)
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',  # 프로젝트 루트/static 폴더
+]

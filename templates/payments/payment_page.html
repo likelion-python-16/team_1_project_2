@@ -126,7 +126,7 @@
     const token = localStorage.getItem("access_token");
     if (!token) {
       alert("로그인 먼저 해주세요.");
-      window.location.href = "/login/";
+      window.location.href = "/user/login/";
     } else {
       fetch("/api/me/", {
         headers: {

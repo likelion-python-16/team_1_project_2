@@ -15,7 +15,7 @@
     <p class="text-lg mb-4">안녕하세요, <strong>{{ nickname }}</strong>님!</p>
     <p class="text-gray-600 mb-6">사용자 ID: {{ user_id }}</p>
 
-    <form action="/logout/" method="post">
+    <form action="/user/logout/" method="post">
       {% csrf_token %}
       <button type="submit" class="bg-red-500 text-white font-semibold px-4 py-2 rounded hover:bg-red-600">
         로그아웃

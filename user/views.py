@@ -14,6 +14,7 @@ def login_template(request):
     )
     return render(request, 'login.html', {"kakao_auth_url": kakao_auth_url})
 
+from django.contrib.auth import login
 
 @csrf_exempt
 def kakao_callback(request):
@@ -46,14 +47,20 @@ def kakao_callback(request):
         return redirect('/')
 
     username = f'kakao_{kakao_id}'
-    user, _ = User.objects.get_or_create(username=username, defaults={'first_name': nickname})
+    user, created = User.objects.get_or_create(username=username, defaults={'first_name': nickname})
 
-    # 3. 세션에 저장
+    # 새로 만든 카카오 유저는 비밀번호 unusable 처리
+    if created:
+        user.set_unusable_password()
+        user.save()
+
+    # 🔹 장고 세션 로그인
+    login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+
+    # (선택) 세션 변수에 추가 데이터 저장
     request.session['nickname'] = nickname
-    request.session['user_id'] = user.id
 
-    return redirect('/profile/')
-
+    return redirect('/user/profile/')
 
 def profile_template(request):
     nickname = request.session.get("nickname")
@@ -74,4 +81,4 @@ def logout_view(request):
     if request.method == "POST":
         request.session.flush()  # 세션 초기화
         return redirect('/')
-    return redirect('/profile/')
+    return redirect('/user/profile/')
