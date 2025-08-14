@@ -1,0 +1,54 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>한줄일기 - Summary</title>
+    <link rel="stylesheet" href="{% static 'css/summary.css' %}">
+</head>
+<body>
+    <div class="container">
+        <h1>한줄일기</h1>
+
+        {% if diary %}
+        <div class="summary-box">
+            <h2>{{ diary.date }} 이야기</h2>
+            <p class="main-content">{{ diary.content }}</p>
+
+            <div class="emotions">
+                {% for emotion in diary.emotions %}
+                <div class="emotion-item">
+                    <span class="emotion-name">{{ emotion.emotion }}</span>
+                    <div class="emotion-bar">
+                        <div class="bar-fill" style="width: {{ emotion.ratio }}%"></div>
+                    </div>
+                    <span class="emotion-percent">{{ emotion.ratio }}%</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="records-box">
+            <h3>오늘 남긴 기록들</h3>
+            <ul>
+                {% for record in records %}
+                <li>
+                    <span class="record-time">{{ record.time }}</span>
+                    <span class="record-text">{{ record.text }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% else %}
+            <p>데이터가 없습니다.</p>
+        {% endif %}
+
+        <div class="button-box">
+            <button id="saveBtn">저장하기</button>
+            <button id="listBtn">목록으로</button>
+        </div>
+    </div>
+
+    <script src="{% static 'js/summary.js' %}"></script>
+</body>
+</html>

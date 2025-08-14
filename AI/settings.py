@@ -23,6 +23,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     "rest_framework", "corsheaders", "diaryrewriting",
     "user",
+    "summary",
+    "payments"
 ]
 
 MIDDLEWARE = [
@@ -120,3 +122,6 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
 }
+
+TOSS_SECRET_KEY="test_sk_kYG57Eba3GP5JWOGj7PzVpWDOxmA"
+TOSS_CLIENT_KEY="test_ck_XZYkKL4MrjqXO7DRLGdmV0zJwlEW"

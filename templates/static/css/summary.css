@@ -1,0 +1,98 @@
+body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background-color: #f9f9f9;
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    max-width: 700px;
+    margin: auto;
+}
+
+.summary-box, .records-box {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.main-content {
+    margin: 10px 0 20px;
+    line-height: 1.5;
+}
+
+.emotions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.emotion-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.emotion-name {
+    width: 60px;
+    font-weight: bold;
+}
+
+.emotion-bar {
+    flex: 1;
+    height: 10px;
+    background-color: #eee;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+    background-color: #4cafef;
+}
+
+.emotion-percent {
+    width: 40px;
+    text-align: right;
+}
+
+.records-box ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.records-box li {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.record-time {
+    font-weight: bold;
+    margin-right: 8px;
+}
+
+.button-box {
+    display: flex;
+    justify-content: space-between;
+}
+
+.button-box button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+#saveBtn {
+    background-color: #4caf50;
+    color: white;
+}
+
+#listBtn {
+    background-color: #2196f3;
+    color: white;
+}

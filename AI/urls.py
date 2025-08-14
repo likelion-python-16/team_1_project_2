@@ -10,4 +10,6 @@ urlpatterns = [
     path('profile/', profile_template),  # 프로필 템플릿
     path('user/login/callback/', kakao_callback),  # 카카오 redirect 콜백
     path('logout/', logout_view),
+    path("", include("payments.urls")),
+    path("", include("summary.urls")),
 ]

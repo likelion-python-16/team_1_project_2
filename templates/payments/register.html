@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>회원가입</title>
+  <link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+<body>
+  <div class="card" style="max-width:480px;margin:3rem auto;">
+    <h2>회원가입</h2>
+    <div id="message"></div>
+    <form id="register-form">
+      <label>Username
+        <input type="text" id="username" required />
+      </label><br>
+      <label>Password
+        <input type="password" id="password" required />
+      </label><br>
+      <button type="submit">가입하기</button>
+    </form>
+    <p>이미 계정이 있나요? <a href="/login/">로그인</a></p>
+  </div>
+
+  <script>
+    function showMessage(msg, error=true) {
+      const el = document.getElementById("message");
+      el.innerHTML = `<div style="padding:10px;border-radius:6px;background:${error?'#ffe6e6':'#e6ffed'};color:${error?'#a33':'#166f3c'};">${msg}</div>`;
+    }
+
+    document.getElementById("register-form").addEventListener("submit", async function(e){
+      e.preventDefault();
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value;
+
+      if (!username || !password) {
+        showMessage("아이디와 비밀번호를 모두 입력하세요.");
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/register/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showMessage("회원가입 성공! 로그인 페이지로 이동합니다.", false);
+          setTimeout(() => window.location.href = "/login/", 800);
+        } else {
+          showMessage(data.detail || JSON.stringify(data));
+        }
+      } catch (err) {
+        showMessage("네트워크 오류");
+        console.error(err);
+      }
+    });
+  </script>
+</body>
+</html>
