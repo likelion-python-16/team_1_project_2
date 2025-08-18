@@ -1,0 +1,163 @@
+<!-- {% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>결제</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+</head>
+<body>
+  <div class="card" style="max-width:720px;margin:2rem auto;">
+    <h1>결제하기</h1>
+    <div id="user-info" style="margin-bottom:10px;"></div>
+
+    <div id="payment-messages"></div>
+    <form id="payment-form">
+      <label>고객 이름 <input type="text" id="customer-name" required /></label><br>
+      <label>주문명 <input type="text" id="order-name" required /></label><br>
+      <label>금액(원) <input type="number" id="amount" required min="100" /></label><br>
+      <label><input type="checkbox" id="agree" /> 이용약관 동의</label><br>
+      <button type="submit">결제하기</button>
+    </form>
+    <p>로그아웃: <button onclick="logout()">로그아웃</button></p>
+  </div>
+
+  <script src="https://js.tosspayments.com/v1"></script>
+  <script>
+    const clientKey = "{{ toss_client_key }}";
+    const tossPayments = TossPayments(clientKey);
+
+    function showMessage(msg, type="error") {
+      const container = document.getElementById("payment-messages");
+      container.innerHTML = `<div style="padding:10px;border-radius:6px;background:${type==='error'?'#ffe6e6':'#e6ffed'};color:${type==='error'?'#a33':'#166f3c'};">${msg}</div>`;
+    }
+
+    function logout() {
+      localStorage.removeItem("access_token");
+      window.location.reload();
+    }
+
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      alert("로그인 먼저 해주세요.");
+      window.location.href = "/login/";
+    } else {
+      // 사용자명 보여주기
+      fetch("/api/me/", {
+        headers: {
+          "Authorization": "Bearer " + token
+        }
+      }).then(r => r.json()).then(user => {
+        document.getElementById("user-info").innerText = `로그인된 사용자: ${user.username}`;
+      });
+    }
+
+    document.getElementById("payment-form").addEventListener("submit", function(e){
+      e.preventDefault();
+      const orderId = "order_" + Date.now();
+      const orderName = document.getElementById("order-name").value.trim();
+      const customerName = document.getElementById("customer-name").value.trim();
+      const amount = Number(document.getElementById("amount").value);
+      const agree = document.getElementById("agree").checked;
+
+      if (!agree) {
+        showMessage("약관에 동의해주세요.", "error");
+        return;
+      }
+      if (!orderName || !customerName || isNaN(amount) || amount < 100) {
+        showMessage("입력을 정확히 해주세요.", "error");
+        return;
+      }
+
+      tossPayments.requestPayment("카드", {
+        amount,
+        orderId,
+        orderName,
+        customerName,
+        successUrl: window.location.origin + "/toss/success/",
+        failUrl: window.location.origin + "/toss/fail/"
+      });
+    });
+  </script>
+</body>
+</html> -->
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>결제</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+</head>
+<body>
+  <div class="card" style="max-width:720px;margin:2rem auto;">
+    <h1>결제하기</h1>
+    <div id="user-info" style="margin-bottom:10px;"></div>
+    <div id="payment-messages"></div>
+
+    <p><strong>고객명:</strong> {{ customer_name }}</p>
+    <p><strong>주문명:</strong> {{ order_name }}</p>
+    <p><strong>결제 금액:</strong> {{ amount }}원</p>
+
+    <label><input type="checkbox" id="agree" /> 이용약관 동의</label><br>
+    <button id="pay-btn">결제하기</button>
+
+    <p>로그아웃: <button onclick="logout()">로그아웃</button></p>
+  </div>
+
+  <script src="https://js.tosspayments.com/v1"></script>
+  <script>
+    const clientKey = "{{ toss_client_key }}";
+    const tossPayments = TossPayments(clientKey);
+
+    function showMessage(msg, type="error") {
+      const container = document.getElementById("payment-messages");
+      container.innerHTML = `<div style="padding:10px;border-radius:6px;background:${type==='error'?'#ffe6e6':'#e6ffed'};color:${type==='error'?'#a33':'#166f3c'};">${msg}</div>`;
+    }
+
+    function logout() {
+      localStorage.removeItem("access_token");
+      window.location.reload();
+    }
+
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      alert("로그인 먼저 해주세요.");
+      window.location.href = "/user/login/";
+    } else {
+      fetch("/api/me/", {
+        headers: {
+          "Authorization": "Bearer " + token
+        }
+      }).then(r => r.json()).then(user => {
+        document.getElementById("user-info").innerText = `로그인된 사용자: ${user.username}`;
+      });
+    }
+
+    document.getElementById("pay-btn").addEventListener("click", function(){
+      const orderId = "order_" + Date.now();
+      const orderName = "{{ order_name }}";
+      const customerName = "{{ customer_name }}";
+      const amount = Number("{{ amount }}");
+      const agree = document.getElementById("agree").checked;
+
+      if (!agree) {
+        showMessage("약관에 동의해주세요.", "error");
+        return;
+      }
+
+      tossPayments.requestPayment("카드", {
+        amount,
+        orderId,
+        orderName,
+        customerName,
+        successUrl: window.location.origin + "/toss/success/",
+        failUrl: window.location.origin + "/toss/fail/"
+      });
+    });
+  </script>
+</body>
+</html>

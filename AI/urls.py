@@ -1,8 +1,14 @@
 
 from django.contrib import admin
 from django.urls import path, include
+from user.views import login_template
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("api/diary/", include("diaryrewriting.urls")),
+    path('', login_template),  # 로그인 템플릿
+
+    path("user/", include("user.urls")),
+    path("", include("payments.urls")),
+    path("", include("summary.urls")),
 ]
