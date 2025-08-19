@@ -60,7 +60,7 @@ def kakao_callback(request):
     # (선택) 세션 변수에 추가 데이터 저장
     request.session['nickname'] = nickname
 
-    return redirect('/user/profile/')
+    return redirect('http://localhost:3000/')
 
 def profile_template(request):
     nickname = request.session.get("nickname")

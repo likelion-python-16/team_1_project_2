@@ -1,18 +1,23 @@
-
+# diaryrewriting/views.py
 from datetime import date
 from typing import List
 
 from django.db.models.functions import TruncDate
 from django.db.models import Count
+from django.contrib.auth import get_user_model
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 
-from .models import User, DiaryEntry, DailySummary
+# ❌ from .models import User, DiaryEntry, DailySummary
+from .models import DiaryEntry, DailySummary
 from .serializers import DiaryEntrySerializer, DailySummarySerializer, UserSerializer
 from .utils import get_or_create_user, attach_uid_cookie
 from .services.openai_service import summarize
+
+User = get_user_model()
+
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -23,12 +28,13 @@ def whoami(request):
     attach_uid_cookie(resp, user)
     return resp
 
+
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def create_entry(request):
     user = get_or_create_user(request)
     payload = request.data.copy()
-    payload["user"] = str(user.id)
+    payload["user"] = user.pk  # PK 타입 그대로 전달 (int/uuid 등)
     ser = DiaryEntrySerializer(data=payload)
     if ser.is_valid():
         entry = ser.save()
@@ -36,6 +42,7 @@ def create_entry(request):
         attach_uid_cookie(resp, user)
         return resp
     return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -54,19 +61,23 @@ def list_entries(request):
     attach_uid_cookie(resp, user)
     return resp
 
+
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def list_days(request):
     user = get_or_create_user(request)
-    qs = (DiaryEntry.objects
-          .filter(user=user)
-          .annotate(day=TruncDate("timestamp"))
-          .values("day")
-          .annotate(count=Count("id"))
-          .order_by("-day"))
+    qs = (
+        DiaryEntry.objects
+        .filter(user=user)
+        .annotate(day=TruncDate("timestamp"))
+        .values("day")
+        .annotate(count=Count("id"))
+        .order_by("-day")
+    )
     resp = Response(list(qs), status=200)
     attach_uid_cookie(resp, user)
     return resp
+
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
@@ -80,9 +91,11 @@ def generate_summary(request):
             d = date.fromisoformat(d_str)
         except ValueError:
             return Response({"detail": "Invalid date. Use YYYY-MM-DD."}, status=400)
+
     entries = DiaryEntry.objects.filter(user=user, timestamp__date=d).order_by("timestamp")
     texts: List[str] = [e.content for e in entries]
     summary_text, emotion, items, diary_text = summarize(texts, d)
+
     obj, created = DailySummary.objects.update_or_create(
         user=user, date=d,
         defaults={
@@ -97,11 +110,13 @@ def generate_summary(request):
     attach_uid_cookie(resp, user)
     return resp
 
+
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def generate_diary(request):
     # alias for generate_summary, more semantic for FE
     return generate_summary(request)
+
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -114,14 +129,17 @@ def get_summary(request):
         d = date.fromisoformat(d_str)
     except ValueError:
         return Response({"detail": "Invalid date. Use YYYY-MM-DD."}, status=400)
+
     try:
         obj = DailySummary.objects.get(user=user, date=d)
     except DailySummary.DoesNotExist:
         return Response({"detail": "Not found"}, status=404)
+
     data = DailySummarySerializer(obj).data
     resp = Response(data, status=200)
     attach_uid_cookie(resp, user)
     return resp
+
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -134,10 +152,12 @@ def get_diary(request):
         d = date.fromisoformat(d_str)
     except ValueError:
         return Response({"detail": "Invalid date. Use YYYY-MM-DD."}, status=400)
+
     try:
         obj = DailySummary.objects.get(user=user, date=d)
     except DailySummary.DoesNotExist:
         return Response({"detail": "Not found"}, status=404)
+
     resp = Response({"date": str(d), "diary_text": obj.diary_text or ""}, status=200)
     attach_uid_cookie(resp, user)
     return resp
