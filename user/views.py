@@ -3,7 +3,8 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
-
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import login
 
 def login_template(request):
     kakao_auth_url = (
@@ -20,47 +21,57 @@ from django.contrib.auth import login
 def kakao_callback(request):
     code = request.GET.get("code")
     if not code:
-        return redirect('/')
+        return redirect("/")
 
-    # 1. 토큰 요청
-    token_url = "https://kauth.kakao.com/oauth/token"
-    token_data = {
-        "grant_type": "authorization_code",
-        "client_id": settings.KAKAO_REST_API_KEY,
-        "redirect_uri": settings.KAKAO_REDIRECT_URI,
-        "code": code,
-    }
-    token_res = requests.post(token_url, data=token_data)
+    # 1) 토큰 교환
+    token_res = requests.post(
+        "https://kauth.kakao.com/oauth/token",
+        data={
+            "grant_type": "authorization_code",
+            "client_id": settings.KAKAO_REST_API_KEY,
+            "redirect_uri": settings.KAKAO_REDIRECT_URI,
+            "code": code,
+        },
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    token_res.raise_for_status()
     access_token = token_res.json().get("access_token")
+    if not access_token:
+        return redirect("/")
 
-    # 2. 사용자 정보 요청
-    user_info_url = "https://kapi.kakao.com/v2/user/me"
-    headers = {"Authorization": f"Bearer {access_token}"}
-    user_info_res = requests.get(user_info_url, headers=headers)
-    kakao_data = user_info_res.json()
+    # 2) 유저 정보
+    user_info = requests.get(
+        "https://kapi.kakao.com/v2/user/me",
+        headers={"Authorization": f"Bearer {access_token}"},
+    ).json()
 
-    kakao_id = kakao_data.get("id")
-    profile = kakao_data.get("kakao_account", {}).get("profile", {})
-    nickname = profile.get("nickname", '')
+    kakao_id = user_info.get("id")
+    profile = user_info.get("kakao_account", {}).get("profile", {}) or {}
+    nickname = profile.get("nickname") or ""
+    if not kakao_id:
+        return redirect("/")
 
-    if not kakao_id or not nickname:
-        return redirect('/')
-
-    username = f'kakao_{kakao_id}'
-    user, created = User.objects.get_or_create(username=username, defaults={'first_name': nickname})
-
-    # 새로 만든 카카오 유저는 비밀번호 unusable 처리
+    # 3) 로컬 유저 연결/생성
+    from django.contrib.auth.models import User
+    username = f"kakao_{kakao_id}"
+    user, created = User.objects.get_or_create(
+        username=username,
+        defaults={"first_name": nickname[:30]},
+    )
     if created:
         user.set_unusable_password()
         user.save()
 
-    # 🔹 장고 세션 로그인
-    login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+    # 4) JWT 발급
+    refresh = RefreshToken.for_user(user)
+    access = str(refresh.access_token)
+    refresh_str = str(refresh)
 
-    # (선택) 세션 변수에 추가 데이터 저장
-    request.session['nickname'] = nickname
-
-    return redirect('http://localhost:3000/')
+    # 5) 프론트로 안전하게 전달
+    #   - 쿼리스트링은 서버 로그에 남으니 지양
+    #   - 프래그먼트(#)는 서버로 전송되지 않음 → 프론트에서만 읽고 localStorage 저장
+    redirect_url = f"http://localhost:3000/auth/callback#access={access}&refresh={refresh_str}"
+    return redirect(redirect_url)
 
 def profile_template(request):
     nickname = request.session.get("nickname")
