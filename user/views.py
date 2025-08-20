@@ -81,4 +81,4 @@ def logout_view(request):
     if request.method == "POST":
         request.session.flush()  # 세션 초기화
         return redirect('/')
-    return redirect('/user/profile/')
+    return redirect('/')

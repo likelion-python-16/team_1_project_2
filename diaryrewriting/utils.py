@@ -8,25 +8,26 @@ USER_COOKIE = "uid"
 
 def get_or_create_user(req: HttpRequest):
     """
-    - 우선 요청 헤더나 쿠키에서 유저 id(pk)를 찾는다.
-    - 존재하면 User 조회, 없으면 새 User 생성.
+    - 로그인되어 있으면 User 반환
+    - 헤더/쿠키의 uid로 조회되면 User 반환
+    - 그 외(비로그인)면 공백 페이지('/')로 리다이렉트
     """
     User = get_user_model()
+
+    # 1) 이미 인증된 사용자
+    if getattr(req, "user", None) and req.user.is_authenticated:
+        return req.user
+
+    # 2) 헤더/쿠키 uid로 조회
     uid: Optional[str] = req.headers.get(USER_HEADER) or req.COOKIES.get(USER_COOKIE)
-    user = None
     if uid:
         try:
-            user = User.objects.get(pk=uid)
+            return User.objects.get(pk=uid)
         except (User.DoesNotExist, ValueError):
-            user = None
+            pass
 
-    if user is None:
-        # 기본 User 모델에 맞게 최소 username은 넣어야 함
-        user = User.objects.create(username=f"guest_{User.objects.count()+1}")
-        user.set_unusable_password()
-        user.save()
-    return user
-
+    # 3) 비로그인 → 공백 페이지로 리다이렉트
+    return redirect("/")
 
 def attach_uid_cookie(resp: HttpResponse, user) -> None:
     """

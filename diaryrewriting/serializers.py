@@ -11,7 +11,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "created_at"]  # 필요하면 "username", "email"도 추가 가능
+        fields = ["id", "created_at","username"]  # 필요하면 "username", "email"도 추가 가능
 
 
 class DiaryEntrySerializer(serializers.ModelSerializer):

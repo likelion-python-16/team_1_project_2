@@ -1,7 +1,7 @@
 
 from django.contrib import admin
 from django.urls import path, include
-from user.views import login_template
+from user.views import login_template ,logout_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -11,4 +11,6 @@ urlpatterns = [
     path("user/", include("user.urls")),
     path("", include("payments.urls")),
     path("", include("summary.urls")),
+    path("api/auth/logout/",logout_view)
+
 ]
