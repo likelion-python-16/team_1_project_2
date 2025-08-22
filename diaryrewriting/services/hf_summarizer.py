@@ -10,7 +10,7 @@ def _sum_pipe():
   mdl = AutoModelForSeq2SeqLM.from_pretrained(MODEL_SUM)
   return pipeline("text2text-generation", model=mdl, tokenizer=tok)
 
-def summarize_korean(text, max_new_tokens=160):
+def summarize_korean(text, max_new_tokens=60):
   if not text or not text.strip():
     return ""
   gen = _sum_pipe()
