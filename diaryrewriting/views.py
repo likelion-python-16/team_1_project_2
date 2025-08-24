@@ -27,9 +27,6 @@ from .services.emotion_aggregate import pick_overall_emotion
 
 User = get_user_model()
 
-MODEL_SUM = os.getenv("HF_SUMMARY_MODEL", "gogamza/kobart-summarization")
-IS_KOBART = "kobart" in MODEL_SUM.lower()
-
 
 # -------------------------------
 # 인증된 사용자 정보 확인
@@ -105,24 +102,20 @@ def _safe_summarize_korean(text: str, max_new_tokens: int) -> str:
 
 
 # -------------------------------
-# 개별 엔트리 요약
+# 개별 엔트리 요약 (원문만 요약)
 # -------------------------------
 def _summarize_entries_with_emotions(
     entries: List[DiaryEntry], emo_preds: List[Dict[str, Any]], per_summary_tokens: int = 80
 ) -> List[Dict[str, str]]:
+    """
+    summarize_korean이 '입력 텍스트만 요약'하므로
+    시간/감정 같은 메타 문구는 붙이지 않고 원문만 넣는다.
+    시간/감정 정보는 응답 JSON에 별도로 유지한다.
+    """
     entry_summaries: List[Dict[str, str]] = []
     for e, emo in zip(entries, emo_preds):
         t = timezone.localtime(e.timestamp).strftime("%H:%M")
-        if IS_KOBART:
-            # KoBART는 지시문 제거: 컨텍스트만
-            in_text = f"{t} {emo.get('label','중립')}. {e.content}"
-        else:
-            # Instruction 모델만 지시문 사용
-            in_text = (
-                f"시간 {t}, 감정 {emo.get('label','중립')}. "
-                "다음 내용을 한국어로 1~2문장으로 요약하라:\n"
-                f"{e.content}"
-            )
+        in_text = e.content  # ✅ 프롬프트/지시문 없이 원문만 전달
         snippet = _safe_summarize_korean(in_text, max_new_tokens=per_summary_tokens) or e.content[:120]
         entry_summaries.append({
             "time": t,
@@ -133,23 +126,18 @@ def _summarize_entries_with_emotions(
 
 
 # -------------------------------
-# 엔트리 요약 → 하루 전체 요약
+# 엔트리 요약 → 하루 전체 요약 (지시문 없이 요약)
 # -------------------------------
 def _meta_summary_from_entries(entry_summaries: List[Dict[str, str]], max_tokens: int = 160) -> str:
-    bullets = "\n".join(
-        f"- {x['time']} / 감정 {x['emotion']} : {x['summary']}" for x in entry_summaries
-    )
-    if IS_KOBART:
-        # KoBART: 지시문 없이 bullets만
-        prompt = bullets
-    else:
-        # Instruction 모델: 지시문 허용
-        prompt = (
-            "아래 항목들을 시간 순으로 자연스럽게 2~3문단 한국어 요약으로 정리하라. "
-            "감정의 변화가 드러나도록 연결하고, 중복은 제거하며 핵심 사건 위주로:\n"
-            f"{bullets}"
-        )
-    return _safe_summarize_korean(prompt, max_new_tokens=max_tokens)
+    """
+    1차 엔트리 요약들을 간단히 나열한 텍스트를 만들고,
+    그 텍스트 자체를 다시 '순수 요약'한다.
+    (프롬프트/지시문 금지)
+    """
+    # 시간 정보를 남기되, 과한 마크업/대괄호 등은 사용하지 않는다.
+    merged = "\n".join(f"{x['time']} - {x['summary']}" for x in entry_summaries)
+    # ✅ 지시문 없이 합친 텍스트 자체를 요약
+    return _safe_summarize_korean(merged, max_new_tokens=max_tokens)
 
 
 # -------------------------------
@@ -196,10 +184,10 @@ def finalize_day_summary(request):
         emo_preds = [{"label": "중립", "score": 0.0} for _ in texts]
         overall_emotion = "중립"
 
-    # 2) 엔트리별 요약
+    # 2) 엔트리별 요약 (원문만 요약)
     entry_summaries = _summarize_entries_with_emotions(entries, emo_preds, per_summary_tokens=80)
 
-    # 3) 하루 메타 요약
+    # 3) 하루 메타 요약 (지시문 없이)
     final_summary = _meta_summary_from_entries(entry_summaries, max_tokens=160)
 
     # 4) upsert + 이력 기록
