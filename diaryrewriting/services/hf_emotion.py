@@ -3,7 +3,6 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipe
 import os
 
 MODEL_EMO = os.getenv("HF_EMOTION_MODEL", "Jinuuuu/KoELECTRA_fine_tunning_emotion")
-# 라벨: 분노/행복/불안/당황/슬픔/상처
 
 @lru_cache(maxsize=1)
 def _emo_pipe():

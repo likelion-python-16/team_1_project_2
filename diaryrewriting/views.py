@@ -55,6 +55,58 @@ def create_entry(request):
 
 
 # -------------------------------
+# ✅ 한 줄 일기 단건 조회
+# -------------------------------
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def retrieve_entry(request, pk: int):
+    user = request.user
+    try:
+        entry = DiaryEntry.objects.get(pk=pk, user=user)
+    except DiaryEntry.DoesNotExist:
+        return Response({"detail": "Not found"}, status=404)
+    return Response(DiaryEntrySerializer(entry).data, status=200)
+
+
+# -------------------------------
+# ✅ 한 줄 일기 수정 (PUT/PATCH)
+# -------------------------------
+@api_view(["PUT", "PATCH"])
+@permission_classes([IsAuthenticated])
+def update_entry(request, pk: int):
+    user = request.user
+    try:
+        entry = DiaryEntry.objects.get(pk=pk, user=user)
+    except DiaryEntry.DoesNotExist:
+        return Response({"detail": "Not found"}, status=404)
+
+    # 허용 필드만 업데이트 (content, timestamp 정도만 권장)
+    payload = request.data.copy()
+    # 사용자가 바꿀 수 없도록 강제
+    payload.pop("user", None)
+    payload.pop("id", None)
+
+    ser = DiaryEntrySerializer(entry, data=payload, partial=(request.method == "PATCH"))
+    if ser.is_valid():
+        entry = ser.save()
+        return Response(DiaryEntrySerializer(entry).data, status=200)
+    return Response(ser.errors, status=400)
+
+
+# -------------------------------
+# ✅ 한 줄 일기 삭제
+# -------------------------------
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def delete_entry(request, pk: int):
+    user = request.user
+    deleted, _ = DiaryEntry.objects.filter(pk=pk, user=user).delete()
+    if not deleted:
+        return Response({"detail": "Not found"}, status=404)
+    return Response(status=204)
+
+
+# -------------------------------
 # 일기 리스트 조회 (날짜별)
 # -------------------------------
 @api_view(["GET"])
