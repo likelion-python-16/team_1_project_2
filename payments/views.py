@@ -57,10 +57,10 @@ def widgetSuccess(request):
     return process_payment(request, "test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6", './widget/success.html')
 
 def paymentSuccess(request):
-    return process_payment(request, "test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R", './payment/success.html')
+    return process_payment(request, "test_sk_kYG57Eba3GP5JWOGj7PzVpWDOxmA", './payment/success.html')
 
 def brandpaySuccess(request):
-    return process_payment(request, "test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R", './brandpay/success.html')
+    return process_payment(request, "test_sk_kYG57Eba3GP5JWOGj7PzVpWDOxmA", './brandpay/success.html')
 
 # 결제 승인 호출하는 함수
 # @docs https://docs.tosspayments.com/guides/v2/payment-widget/integration#3-결제-승인하기
@@ -103,7 +103,7 @@ def issueBillingKey(request):
         return JsonResponse({'error': str(e)}, status=400)
 
     url = "https://api.tosspayments.com/v1/billing/authorizations/issue"
-    secret_key = "test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R"
+    secret_key = "test_sk_kYG57Eba3GP5JWOGj7PzVpWDOxmA"
     headers = create_headers(secret_key)
     params = {
         "customerKey": customerKey,
@@ -141,7 +141,7 @@ def confirm_billing(request):
         return JsonResponse({'error': str(e)}, status=400)
 
     url = f"https://api.tosspayments.com/v1/billing/{billingKey}"
-    secret_key = "test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R"
+    secret_key = "test_sk_kYG57Eba3GP5JWOGj7PzVpWDOxmA"
     headers = create_headers(secret_key)
     params = {
         "customerKey": customerKey,
@@ -168,7 +168,7 @@ def callback_auth(request):
         return JsonResponse({'error': 'Missing parameters'}, status=400)
 
     url = "https://api.tosspayments.com/v1/brandpay/authorizations/access-token"
-    secret_key = "test_sk_aBX7zk2yd8yoXwoJ0gqVx9POLqKQ"
+    secret_key = "test_sk_kYG57Eba3GP5JWOGj7PzVpWDOxmA"
     headers = create_headers(secret_key)
     params = {
         "grantType": "AuthorizationCode",
