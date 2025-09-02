@@ -1,0 +1,75 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="https://static.toss.im/icons/png/4x/icon-toss-logo.png" />
+    <link rel="stylesheet" href="{% static 'style.css' %}" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>일일 다이어리</title>
+    <!-- SDK 추가 -->
+    <script src="https://js.tosspayments.com/v2/standard"></script>
+  </head>
+
+  <body>
+    <div class="wrapper">
+      <!-- 일반 결제 -->
+      <div class="box_section" style="padding: 40px 30px 50px 30px; margin: 30px 0">
+        <h1>일반 결제</h1>
+        <button class="button" style="margin-top: 30px" onclick="requestPayment()">카드 결제하기</button>
+      </div>
+
+      <!-- 정기 결제 -->
+      <div class="box_section" style="padding: 40px 30px 50px 30px; margin: 30px 0">
+        <h1>정기 결제</h1>
+        <button class="button" style="margin-top: 30px" onclick="requestBillingAuth()">빌링키 발급하기</button>
+      </div>
+    </div>
+
+    <script>
+      const amount = {
+        currency: "KRW",
+        value: 5900,
+      };
+
+      // ✅ API 개별 연동 클라이언트 키 사용해야 함 (gck 아님!)
+      const clientKey = "test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq";
+      const customerKey = generateRandomString();
+      const tossPayments = TossPayments(clientKey);
+
+      // 회원 결제 객체 생성
+      const payment = tossPayments.payment({ customerKey });
+
+      // 카드 결제 요청
+      async function requestPayment() {
+        await payment.requestPayment({
+          method: "CARD",
+          amount,
+          orderId: generateRandomString(),
+          orderName: "일일 다이어리",
+          successUrl: window.location.origin + "/payment/success",
+          failUrl: window.location.origin + "/fail",
+          customerEmail: "customer123@gmail.com",
+          customerName: "김토스",
+        });
+      }
+
+      // 빌링키 발급 요청
+      async function requestBillingAuth() {
+        await payment.requestBillingAuth({
+          method: "CARD",
+          successUrl: window.location.origin + "/payment/billing",
+          failUrl: window.location.origin + "/fail",
+          customerEmail: "customer123@gmail.com",
+          customerName: "김토스",
+        });
+      }
+
+      function generateRandomString() {
+        return window.btoa(Math.random()).slice(0, 20);
+      }
+    </script>
+  </body>
+</html>
