@@ -11,6 +11,7 @@ ENGINES = [
     
 ]
 
+
 def build_links_for_keyword(keyword: str, engines: List[Dict] = ENGINES) -> List[Dict]:
     """키워드로 각 엔진의 검색 링크를 만든다."""
     if not keyword or not keyword.strip():

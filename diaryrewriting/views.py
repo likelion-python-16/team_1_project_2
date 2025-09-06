@@ -14,7 +14,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-
+from datetime import datetime, time, timedelta
 from .models import DiaryEntry, DailySummary, SummaryHistory
 from .serializers import (
     DiaryEntrySerializer, DailySummarySerializer, UserSerializer, SummaryHistorySerializer
@@ -114,16 +114,30 @@ def delete_entry(request, pk: int):
 def list_entries(request):
     user = request.user
     d_str = request.GET.get("date")
+
+    print(f"DEBUG >>> user: id={user.id}, username={user.username}")
+
     qs = DiaryEntry.objects.filter(user=user)
+
     if d_str:
         try:
             target = date.fromisoformat(d_str)
-            qs = qs.filter(timestamp__date=target)
+
+            # ✅ KST 기준 자정~자정
+            tz = timezone.get_current_timezone()  # Asia/Seoul
+            start = timezone.make_aware(datetime.combine(target, time.min), tz)
+            end = start + timedelta(days=1)
+
+            qs = qs.filter(timestamp__gte=start, timestamp__lt=end)
+
+            print(f"DEBUG >>> date range: {start.isoformat()} ~ {end.isoformat()}")
         except ValueError:
             return Response({"detail": "Invalid date. Use YYYY-MM-DD."}, status=400)
-    data = DiaryEntrySerializer(qs.order_by("-timestamp"), many=True).data
-    return Response(data, status=200)
 
+    qs = qs.order_by("-timestamp")
+    data = DiaryEntrySerializer(qs, many=True).data
+    print(f"DEBUG >>> entries count={len(data)} first={data[0] if data else None}")
+    return Response(data, status=200)
 
 # -------------------------------
 # 일기 작성된 날 목록
