@@ -73,7 +73,7 @@ jobs:
 
             REPO_URL="https://github.com/likelion-python-16/team_1_project_2.git"
             BRANCH="main"
-            APP_DIR="/home/ubuntu/app}"
+            APP_DIR="/home/ubuntu/app"
 
             # 1) Docker & Compose 준비
             sudo apt-get update -y
