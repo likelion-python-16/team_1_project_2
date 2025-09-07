@@ -14,60 +14,51 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: DjangoUserPass!123
-          MYSQL_DATABASE: project2_db
-          MYSQL_USER: prject2_user
-          MYSQL_PASSWORD: DjangoUserPass!123
+          MYSQL_ROOT_PASSWORD: rootpass
+          MYSQL_DATABASE: test_db
+          MYSQL_USER: test_user
+          MYSQL_PASSWORD: test_pass
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping --silent"
+          --health-cmd="mysqladmin ping -h 127.0.0.1 --silent"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
 
     strategy:
       matrix:
-        python-version: [3.12.3]
+        python-version: [3.12]
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Install system dependencies for mysqlclient
-      run: sudo apt-get install -y default-libmysqlclient-dev
+      - name: Install system dependencies for mysqlclient
+        run: sudo apt-get install -y default-libmysqlclient-dev
 
-    - name: Install Python dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-    - name: Grant DB permissions to test user
-      run: |
-        sudo apt-get install -y default-mysql-client
-        mysql -h 127.0.0.1 -u root -proot -e "
-          CREATE USER IF NOT EXISTS 'restaurant_user'@'%' IDENTIFIED BY 'db_password';
-          GRANT ALL PRIVILEGES ON *.* TO 'restaurant_user'@'%';
-          FLUSH PRIVILEGES;
-        "
+      - name: Wait for MySQL to be ready
+        run: |
+          for i in {1..10}; do
+            nc -z 127.0.0.1 3306 && echo "MySQL is up" && break
+            echo "Waiting for MySQL..."
+            sleep 5
+          done
 
-    - name: Wait for MySQL to be ready
-      run: |
-        for i in {1..10}; do
-          nc -z 127.0.0.1 3306 && echo "MySQL is up" && break
-          echo "Waiting for MySQL..."
-          sleep 5
-        done
-
-    - name: Run Tests
-      env:
-        DB_NAME: project2_db
-        DB_USER: prject2_user
-        DB_PASSWORD: DjangoUserPass!123
-        DB_HOST: 127.0.0.1
-      run: |
-        python manage.py test
+      - name: Run Tests
+        env:
+          DB_NAME: test_db
+          DB_USER: test_user
+          DB_PASSWORD: test_pass
+          DB_HOST: 127.0.0.1
+        run: |
+          python manage.py test
