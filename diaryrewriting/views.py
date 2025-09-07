@@ -1,8 +1,7 @@
 # diaryrewriting/views.py
 
-from datetime import date
+from datetime import date, datetime, time, timedelta
 from typing import List, Dict, Any
-import os
 
 from django.db import transaction
 from django.utils import timezone
@@ -14,7 +13,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from datetime import datetime, time, timedelta
+
 from .models import DiaryEntry, DailySummary, SummaryHistory
 from .serializers import (
     DiaryEntrySerializer, DailySummarySerializer, UserSerializer, SummaryHistorySerializer
@@ -80,9 +79,7 @@ def update_entry(request, pk: int):
     except DiaryEntry.DoesNotExist:
         return Response({"detail": "Not found"}, status=404)
 
-    # 허용 필드만 업데이트 (content, timestamp 정도만 권장)
     payload = request.data.copy()
-    # 사용자가 바꿀 수 없도록 강제
     payload.pop("user", None)
     payload.pop("id", None)
 
@@ -107,7 +104,7 @@ def delete_entry(request, pk: int):
 
 
 # -------------------------------
-# 일기 리스트 조회 (날짜별)
+# 일기 리스트 조회 (날짜별, KST 자정~자정 범위)
 # -------------------------------
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -122,22 +119,18 @@ def list_entries(request):
     if d_str:
         try:
             target = date.fromisoformat(d_str)
-
-            # ✅ KST 기준 자정~자정
             tz = timezone.get_current_timezone()  # Asia/Seoul
             start = timezone.make_aware(datetime.combine(target, time.min), tz)
             end = start + timedelta(days=1)
-
             qs = qs.filter(timestamp__gte=start, timestamp__lt=end)
-
-            print(f"DEBUG >>> date range: {start.isoformat()} ~ {end.isoformat()}")
         except ValueError:
             return Response({"detail": "Invalid date. Use YYYY-MM-DD."}, status=400)
 
     qs = qs.order_by("-timestamp")
     data = DiaryEntrySerializer(qs, many=True).data
-    print(f"DEBUG >>> entries count={len(data)} first={data[0] if data else None}")
+   
     return Response(data, status=200)
+
 
 # -------------------------------
 # 일기 작성된 날 목록
@@ -173,15 +166,10 @@ def _safe_summarize_korean(text: str, max_new_tokens: int) -> str:
 def _summarize_entries_with_emotions(
     entries: List[DiaryEntry], emo_preds: List[Dict[str, Any]], per_summary_tokens: int = 80
 ) -> List[Dict[str, str]]:
-    """
-    summarize_korean이 '입력 텍스트만 요약'하므로
-    시간/감정 같은 메타 문구는 붙이지 않고 원문만 넣는다.
-    시간/감정 정보는 응답 JSON에 별도로 유지한다.
-    """
     entry_summaries: List[Dict[str, str]] = []
     for e, emo in zip(entries, emo_preds):
         t = timezone.localtime(e.timestamp).strftime("%H:%M")
-        in_text = e.content  # ✅ 프롬프트/지시문 없이 원문만 전달
+        in_text = e.content
         snippet = _safe_summarize_korean(in_text, max_new_tokens=per_summary_tokens) or e.content[:120]
         entry_summaries.append({
             "time": t,
@@ -195,46 +183,45 @@ def _summarize_entries_with_emotions(
 # 엔트리 요약 → 하루 전체 요약 (지시문 없이 요약)
 # -------------------------------
 def _meta_summary_from_entries(entry_summaries: List[Dict[str, str]], max_tokens: int = 160) -> str:
-    """
-    1차 엔트리 요약들을 간단히 나열한 텍스트를 만들고,
-    그 텍스트 자체를 다시 '순수 요약'한다.
-    (프롬프트/지시문 금지)
-    """
-    # 시간 정보를 남기되, 과한 마크업/대괄호 등은 사용하지 않는다.
     merged = "\n".join(f"{x['time']} - {x['summary']}" for x in entry_summaries)
-    # ✅ 지시문 없이 합친 텍스트 자체를 요약
     return _safe_summarize_korean(merged, max_new_tokens=max_tokens)
 
 
 # -------------------------------
-# ✅ 하루 요약 생성 API
+# ✅ 하루 요약 생성 API (엔트리 조회도 KST 자정~자정 범위로 변경)
 # -------------------------------
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def finalize_day_summary(request):
     user = request.user
 
-    # 날짜 파싱 (요청 없으면 현지 시간 기준 '오늘')
+    # 날짜 파싱 (없으면 현지(KST) 오늘)
     d_str = (request.data or {}).get("date")
     if d_str:
         try:
-            d = date.fromisoformat(d_str)
+            target = date.fromisoformat(d_str)
         except ValueError:
             return Response({"detail": "Invalid date. Use YYYY-MM-DD."}, status=400)
     else:
-        now_local = timezone.localtime(timezone.now())
-        d = now_local.date()
+        target = timezone.localdate()  # KST 오늘
 
-    # 해당 날짜의 모든 일기
-    entries = (DiaryEntry.objects
-               .filter(user=user, timestamp__date=d)
-               .order_by("timestamp"))
+    # ✅ KST 기준 자정~자정 범위로 엔트리 조회
+    tz = timezone.get_current_timezone()  # Asia/Seoul
+    start = timezone.make_aware(datetime.combine(target, time.min), tz)
+    end = start + timedelta(days=1)
+
+    entries = (
+        DiaryEntry.objects
+        .filter(user=user, timestamp__gte=start, timestamp__lt=end)
+        .order_by("timestamp")
+    )
     texts: List[str] = [e.content for e in entries]
+    print(f"DEBUG >>> summary target={target} range={start.isoformat()}~{end.isoformat()} entries={len(texts)}")
 
     # 일기 없음 → 빈 요약 upsert
     if not texts:
         obj, _ = DailySummary.objects.update_or_create(
-            user=user, date=d,
+            user=user, date=target,
             defaults={"summary_text": "", "emotion": "", "recommended_items": [], "diary_text": ""},
         )
         data = DailySummarySerializer(obj).data
@@ -250,17 +237,17 @@ def finalize_day_summary(request):
         emo_preds = [{"label": "중립", "score": 0.0} for _ in texts]
         overall_emotion = "중립"
 
-    # 2) 엔트리별 요약 (원문만 요약)
+    # 2) 엔트리별 요약
     entry_summaries = _summarize_entries_with_emotions(entries, emo_preds, per_summary_tokens=80)
 
-    # 3) 하루 메타 요약 (지시문 없이)
+    # 3) 하루 메타 요약
     final_summary = _meta_summary_from_entries(entry_summaries, max_tokens=160)
 
     # 4) upsert + 이력 기록
     joined = "\n".join(e.content for e in entries)  # 원문 백업용
     with transaction.atomic():
         obj, _ = DailySummary.objects.update_or_create(
-            user=user, date=d,
+            user=user, date=target,
             defaults={
                 "summary_text": final_summary,
                 "emotion": overall_emotion,
@@ -270,7 +257,7 @@ def finalize_day_summary(request):
         )
         SummaryHistory.objects.create(
             user=user,
-            date=d,
+            date=target,
             summary_text=final_summary,
             emotion=overall_emotion,
             meta={"entry_emotions": emo_preds, "entry_summaries": entry_summaries},
@@ -284,7 +271,7 @@ def finalize_day_summary(request):
 
 
 # -------------------------------
-# ✅ 하루 요약 조회 API
+# ✅ 하루 요약 조회 API (요약 자체는 DateField 이므로 그대로 조회)
 # -------------------------------
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -294,12 +281,12 @@ def get_summary(request):
     if not d_str:
         return Response({"detail": "date query param required"}, status=400)
     try:
-        d = date.fromisoformat(d_str)
+        target = date.fromisoformat(d_str)
     except ValueError:
         return Response({"detail": "Invalid date. Use YYYY-MM-DD."}, status=400)
 
     try:
-        obj = DailySummary.objects.get(user=user, date=d)
+        obj = DailySummary.objects.get(user=user, date=target)
     except DailySummary.DoesNotExist:
         return Response({"detail": "Not found"}, status=404)
 

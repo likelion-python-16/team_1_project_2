@@ -71,9 +71,9 @@ WSGI_APPLICATION = "AI.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "NAME": os.getenv("DB_NAME"),
-        "USER": os.getenv("DB_USER"),
-        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "NAME": os.getenv("DB_NAME","project2_db"),
+        "USER": os.getenv("DB_USER","prject2_user"),
+        "PASSWORD": os.getenv("DB_PASSWORD","DjangoUserPass!123"),
         "HOST": os.getenv("DB_HOST", "127.0.0.1"),
         "PORT": os.getenv("DB_PORT", "3306"),
         "OPTIONS": {
@@ -83,7 +83,13 @@ DATABASES = {
         },
     }
 }
-
+if os.environ.get("TEST"):
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 # Use Amazon
 if os.environ.get("S3_BUCKET"):
