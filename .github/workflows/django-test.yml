@@ -43,6 +43,7 @@ jobs:
 
       - name: Run tests
         env:
+          # 앱에서 .env 없을 때 환경변수로 읽게 되어 있다면 여기서 주입
           SECRET_KEY: test-secret-key
           DEBUG: "True"
           DB_ENGINE: django.db.backends.mysql
@@ -59,36 +60,66 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: SSH into EC2 and deploy
+      - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.2.0
+
         with:
-          host: 13.124.158.185      
-          username: ubuntu   
-          key: ${{ secrets.PROJECT2PEM }}      
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.PROJECT2PEM }}
+          port: 22
           script: |
-            set -e
-                
-            sudo apt-get update
+            set -euo pipefail
+
+            REPO_URL="https://github.com/likelion-python-16/team_1_project_2.git"
+            BRANCH="main"
+            APP_DIR="/home/ubuntu/app}"
+
+            # 1) Docker & Compose 준비
+            sudo apt-get update -y
+            # Ubuntu 24.04 LTS 기준 패키지명
             sudo apt-get install -y docker.io docker-compose-v2
-              
             sudo systemctl enable --now docker
             sudo usermod -aG docker $USER || true
             docker --version || sudo docker --version
             docker compose version || sudo docker compose version
 
-            cd ~/app
+            # 2) 작업 디렉토리
+            mkdir -p "$APP_DIR"
+            cd "$APP_DIR"
 
+            # Git 안전 디렉토리 허용
+            git config --global --add safe.directory "$APP_DIR" || true
 
-            if [ ! -d ".git" ]; then
-              git clone --depth=1 https://github.com/likelion-python-16/team_1_project_2.git .
-            else
+            # 3) 코드 동기화 (모든 케이스 안전 처리)
+            if [ -d ".git" ]; then
+              echo "[INFO] Existing git repo detected. Updating..."
+              git remote set-url origin "$REPO_URL" || true
               git fetch --all -p
-              git reset --hard origin/main
+              git checkout "$BRANCH"
+              git reset --hard "origin/$BRANCH"
+            else
+              if [ -z "$(ls -A 2>/dev/null || true)" ]; then
+                echo "[INFO] Empty dir. Cloning..."
+                git clone --depth=1 --branch "$BRANCH" "$REPO_URL" .
+              else
+                echo "[INFO] Non-empty dir without .git. Converting to repo and syncing..."
+                git init
+                git remote add origin "$REPO_URL" || git remote set-url origin "$REPO_URL"
+                git fetch --depth=1 origin "$BRANCH"
+                git checkout -B "$BRANCH" "origin/$BRANCH"
+                git reset --hard "origin/$BRANCH"
+                git clean -fdx
+              fi
             fi
 
+            
 
-            sudo docker compose -f docker-compose.yml up -d --build
-
-
-            sudo docker compose ps
-            sudo docker ps
+            # 5) 배포 (docker-compose.yml 기준)
+            if [ -f docker-compose.yml ]; then
+              sudo docker compose up -d --build
+              sudo docker compose ps
+            else
+              echo "[ERROR] docker-compose.yml not found in $APP_DIR"
+              exit 1
+            fi
