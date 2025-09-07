@@ -80,7 +80,7 @@ jobs:
 
 
             if [ ! -d ".git" ]; then
-              git clone --depth=1 https://github.com/<YOUR_ORG_OR_USER>/<YOUR_REPO>.git .
+              git clone --depth=1 https://github.com/likelion-python-16/team_1_project_2.git .
             else
               git fetch --all -p
               git reset --hard origin/main
