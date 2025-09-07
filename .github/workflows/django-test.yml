@@ -64,7 +64,7 @@ jobs:
         with:
           host: 13.124.158.185        # 👉 EC2 퍼블릭 IP
           username: ubuntu   # 👉 보통 ubuntu
-          key: ${{ secrets.MY_PROJECT2PEM }}      # 👉 .pem 키 내용
+          key: ${{ secrets.PROJECT2PEM }}      # 👉 .pem 키 내용
           script: |
             set -e
 
