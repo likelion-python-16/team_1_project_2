@@ -11,6 +11,6 @@ urlpatterns = [
     path("api/user/", include("user.urls")),
     path("api/", include("payments.urls")),
     path("api/", include("summary.urls")),
-    path("api/auth/logout/",logout_view)
+    path("api/auth/logout/",logout_view) 
 
 ]
