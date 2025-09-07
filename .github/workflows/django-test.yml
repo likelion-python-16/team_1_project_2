@@ -46,6 +46,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Create .env for tests   # ✅ 여기를 추가
+        run: |
+          echo "SECRET_KEY=insecure-test-key" >> .env
+          echo "DB_NAME=test_db" >> .env
+          echo "DB_USER=test_user" >> .env
+          echo "DB_PASSWORD=test_pass" >> .env
+          echo "DB_HOST=127.0.0.1" >> .env
+          echo "DB_PORT=3306" >> .env
+
       - name: Wait for MySQL to be ready
         run: |
           for i in {1..10}; do
@@ -55,11 +64,7 @@ jobs:
           done
 
       - name: Run Tests
-        env:
-          DB_NAME: test_db
-          DB_USER: test_user
-          DB_PASSWORD: test_pass
-          DB_HOST: 127.0.0.1
+        env:   # ✅ 여기선 굳이 DB값 안 넣어도 됨 (.env에서 가져오기 때문에)
+          SECRET_KEY: insecure-test-key
         run: |
           python manage.py test
-          
