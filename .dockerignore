@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+*.log
+
+# VCS
+.git
+.gitignore
+
+# OS
+.DS_Store
+
+# Node
+node_modules/
+.next/
+npm-debug.log
+yarn.lock
+pnpm-lock.yaml
+
+# Virtualenv
+venv/
+.env
+
+# Django collectstatic 결과물(볼륨으로 관리)
+staticfiles/
+media/
