@@ -14,10 +14,10 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: restaurant_db
-          MYSQL_USER: restaurant_user
-          MYSQL_PASSWORD: db_password
+          MYSQL_ROOT_PASSWORD: DjangoUserPass!123
+          MYSQL_DATABASE: project2_db
+          MYSQL_USER: prject2_user
+          MYSQL_PASSWORD: DjangoUserPass!123
         ports:
           - 3306:3306
         options: >-
@@ -65,8 +65,8 @@ jobs:
 
     - name: Run Tests
       env:
-        DB_NAME: project_db
-        DB_USER: ptject_user
+        DB_NAME: project2_db
+        DB_USER: ptject2_user
         DB_PASSWORD: DjangoUserPass!123
         DB_HOST: 127.0.0.1
       run: |
