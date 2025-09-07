@@ -113,7 +113,27 @@ jobs:
               fi
             fi
 
+            cat > .env << 'EOF'
+            # Django
+            SECRET_KEY=${{ secrets.SECRET_KEY }}
+            DEBUG=False
+
+            # DB
+            DB_ENGINE=django.db.backends.mysql
+            DB_NAME=${{ secrets.DB_NAME }}
+            DB_USER=${{ secrets.DB_USER }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            DB_HOST=${{ secrets.DB_HOST }}
+            DB_PORT=${{ secrets.DB_PORT }}
+            KAKAO_REDIRECT_URI =${{ secrets.KAKAO_REDIRECT_URI}}
+            KAKAO_REST_API_KEY =${{secrets.KAKAO_REST_API_KEY}}
+
+
+            TOSS_CLIENT_KEY = ${{secrets.TOSS_CLIENT_KEY}}
+            TOSS_SECRET_KEY = ${{secrets.TOSS_SECRET_KEY}}
             
+            EOF
+
 
             # 5) 배포 (docker-compose.yml 기준)
             if [ -f docker-compose.yml ]; then
