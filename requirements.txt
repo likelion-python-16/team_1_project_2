@@ -1,21 +1,12 @@
+# 최소 운영 세트
 Django==5.2.5
 djangorestframework==3.16.1
-django-cors-headers==4.7.0
 djangorestframework_simplejwt==5.5.1
+django-cors-headers==4.7.0
 mysqlclient==2.2.7
 python-dotenv==1.1.1
 requests==2.32.4
-PyJWT==2.10.1
 
-# NLP 추론만 (CPU)
+# 모델 서비스에 꼭 필요한 최소
 transformers==4.55.3
 tokenizers==0.21.4
-torch==2.3.1           # CPU 빌드 (CUDA 미포함)
-safetensors==0.6.2
-huggingface-hub==0.34.4
-
-pydantic==2.11.7
-pydantic_core==2.33.2
-packaging==25.0
-typing_extensions==4.14.1
-
