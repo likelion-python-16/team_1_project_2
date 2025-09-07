@@ -1,0 +1,14 @@
+# 최소 운영 세트
+Django==5.2.5
+djangorestframework==3.16.1
+djangorestframework_simplejwt==5.5.1
+django-cors-headers==4.7.0
+mysqlclient==2.2.7
+python-dotenv==1.1.1
+requests==2.32.4
+
+# 모델 서비스에 꼭 필요한 최소
+transformers==4.55.3
+tokenizers==0.21.4
+
+# torch는 Dockerfile에서 CPU 전용으로 별도 설치 (아래 참조)
