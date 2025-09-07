@@ -64,7 +64,7 @@ jobs:
         uses: appleboy/ssh-action@v1.2.0
 
         with:
-          host: ${{ secrets.EC2_HOST }}
+          host: 13.124.158.185
           username: ubuntu
           key: ${{ secrets.PROJECT2PEM }}
           port: 22
