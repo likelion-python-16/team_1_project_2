@@ -1,13 +1,12 @@
-name: Django CI
+name: CI/CD (Django → EC2 via SSH)
 
 on:
   push:
-    branches: [ "main", "dev" ]
-  pull_request:
-    branches: [ "main", "dev" ]
+    branches: [ "main" ]   # 필요시 dev 등 추가
+  workflow_dispatch:
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
 
     services:
@@ -24,47 +23,74 @@ jobs:
           --health-cmd="mysqladmin ping -h 127.0.0.1 --silent"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=5
-
-    strategy:
-      matrix:
-        python-version: [3.12]
+          --health-retries=10
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12"
 
-      - name: Install system dependencies for mysqlclient
-        run: sudo apt-get install -y default-libmysqlclient-dev
+      - name: Install system deps for mysqlclient
+        run: sudo apt-get update && sudo apt-get install -y default-libmysqlclient-dev
 
-      - name: Install Python dependencies
+      - name: Install Python deps
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Create .env for tests   # ✅ 여기를 추가
-        run: |
-          echo "SECRET_KEY=insecure-test-key" >> .env
-          echo "DB_NAME=test_db" >> .env
-          echo "DB_USER=test_user" >> .env
-          echo "DB_PASSWORD=test_pass" >> .env
-          echo "DB_HOST=127.0.0.1" >> .env
-          echo "DB_PORT=3306" >> .env
-
-      - name: Wait for MySQL to be ready
-        run: |
-          for i in {1..10}; do
-            nc -z 127.0.0.1 3306 && echo "MySQL is up" && break
-            echo "Waiting for MySQL..."
-            sleep 5
-          done
-
-      - name: Run Tests
-        env:   # ✅ 여기선 굳이 DB값 안 넣어도 됨 (.env에서 가져오기 때문에)
-          SECRET_KEY: insecure-test-key
+      - name: Run tests
+        env:
+          SECRET_KEY: test-secret-key
+          DEBUG: "True"
+          DB_ENGINE: django.db.backends.mysql
+          DB_NAME: test_db
+          DB_USER: test_user
+          DB_PASSWORD: test_pass
+          DB_HOST: 127.0.0.1
+          DB_PORT: "3306"
         run: |
           python manage.py test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: SSH into EC2 and deploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: 13.124.158.185        # 👉 EC2 퍼블릭 IP
+          username: ubuntu   # 👉 보통 ubuntu
+          key: ${{ secrets.MY_PROJECT2PEM }}      # 👉 .pem 키 내용
+          script: |
+            set -e
+
+            # 1) 필수 패키지
+            sudo apt-get update -y
+            sudo apt-get install -y git docker.io docker-compose-plugin
+
+            # 2) 앱 디렉토리 준비
+            APP_DIR="/home/ubuntu/app"    
+            REPO_URL="https://github.com/likelion-python-16/team_1_project_2.git"     # 👉 깃허브 repo 주소
+            if [ ! -d "$APP_DIR" ]; then
+              git clone "$REPO_URL" "$APP_DIR"
+            fi
+
+            # 3) 최신 코드 받기
+            cd "$APP_DIR"
+            git fetch --all
+            git reset --hard origin/main
+
+            # 4) .env 반영
+            echo "${{ secrets.MY_PROD_ENV }}" > .env
+
+            # 5) Docker Compose 빌드 & 재기동
+            docker compose pull || true
+            docker compose up -d --build
+
+            # 6) 마이그레이션/정적파일 (web 서비스명 확인 필요)
+            docker compose exec -T web python manage.py migrate --noinput
+            docker compose exec -T web python manage.py collectstatic --noinput
