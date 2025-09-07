@@ -67,30 +67,28 @@ jobs:
           key: ${{ secrets.PROJECT2PEM }}      
           script: |
             set -e
+                
+            sudo apt-get update
+            sudo apt-get install -y docker.io docker-compose-v2
+              
+            sudo systemctl enable --now docker
+            sudo usermod -aG docker $USER || true
+            docker --version || sudo docker --version
+            docker compose version || sudo docker compose version
 
-            # 1) 필수 패키지
-            sudo apt-get update -y
-            sudo apt-get install -y git docker.io docker-compose-plugin
+            cd ~/app
 
-            # 2) 앱 디렉토리 준비
-            APP_DIR="/home/ubuntu/app"    
-            REPO_URL="https://github.com/likelion-python-16/team_1_project_2.git"     # 👉 깃허브 repo 주소
-            if [ ! -d "$APP_DIR" ]; then
-              git clone "$REPO_URL" "$APP_DIR"
+
+            if [ ! -d ".git" ]; then
+              git clone --depth=1 https://github.com/<YOUR_ORG_OR_USER>/<YOUR_REPO>.git .
+            else
+              git fetch --all -p
+              git reset --hard origin/main
             fi
 
-            # 3) 최신 코드 받기
-            cd "$APP_DIR"
-            git fetch --all
-            git reset --hard origin/main
 
-            # 4) .env 반영
-            echo "${{ secrets.MY_PROD_ENV }}" > .env
+            sudo docker compose -f docker-compose.yml up -d --build
 
-            # 5) Docker Compose 빌드 & 재기동
-            docker compose pull || true
-            docker compose up -d --build
 
-            # 6) 마이그레이션/정적파일 (web 서비스명 확인 필요)
-            docker compose exec -T web python manage.py migrate --noinput
-            docker compose exec -T web python manage.py collectstatic --noinput
+            sudo docker compose ps
+            sudo docker ps
