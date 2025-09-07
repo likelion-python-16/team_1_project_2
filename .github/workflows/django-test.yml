@@ -62,9 +62,9 @@ jobs:
       - name: SSH into EC2 and deploy
         uses: appleboy/ssh-action@v1.2.0
         with:
-          host: 13.124.158.185        # 👉 EC2 퍼블릭 IP
-          username: ubuntu   # 👉 보통 ubuntu
-          key: ${{ secrets.PROJECT2PEM }}      # 👉 .pem 키 내용
+          host: 13.124.158.185      
+          username: ubuntu   
+          key: ${{ secrets.PROJECT2PEM }}      
           script: |
             set -e
 
