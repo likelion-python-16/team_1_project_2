@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_prometheus",
     # third-party
     "corsheaders",
     "rest_framework",
@@ -37,6 +38,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",   # ✅ CORS는 최대한 위쪽
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -46,6 +48,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # ❌ 중복 제거: SessionMiddleware 두 번 금지
+    "django_prometheus.middleware.PrometheusAfterMiddleware",
+    "common.middleware.SlowRequestAlertMiddleware",
 ]
 
 ROOT_URLCONF = "AI.urls"
@@ -79,7 +83,8 @@ DATABASES = {
         "OPTIONS": {
             "charset": "utf8mb4",
             # ✅ 문자셋 + 타임존 고정 (UTC) – 타임존 이슈 예방
-            "init_command": "SET time_zone = '+09:00'",
+            "use_unicode": True,
+            "init_command": "SET time_zone = '+09:00', sql_mode = 'STRICT_TRANS_TABLES'",
         },
     }
 }
@@ -169,3 +174,69 @@ KAKAO_REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URI", "http://localhost:8000/api/
 TOSS_SECRET_KEY = os.getenv("TOSS_SECRET_KEY", "")
 TOSS_CLIENT_KEY = os.getenv("TOSS_CLIENT_KEY", "")
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
+
+# ==============================================================
+# ✅ Webhook Error Logging (Slack/Discord)
+# ==============================================================
+
+import json
+import logging
+
+SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL")
+DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
+
+class WebhookErrorHandler(logging.Handler):
+    """
+    Django 에러 로그를 Slack/Discord 웹훅으로 전송.
+    - 전송 실패는 앱 동작에 영향 주지 않도록 무시.
+    - 메시지는 길이 제한으로 잘라서 전송(민감정보 과다 노출 방지).
+    """
+    def emit(self, record):
+        try:
+            from datetime import datetime
+            import requests  # lazy import (로그 발생시에만)
+            msg = self.format(record)
+            short = msg[:1800]
+
+            if SLACK_WEBHOOK_URL:
+                requests.post(
+                    SLACK_WEBHOOK_URL,
+                    data=json.dumps({
+                        "text": f":rotating_light: *Django Error* ({datetime.now().isoformat(timespec='seconds')})\n```{short}```"
+                    }),
+                    headers={"Content-Type": "application/json"},
+                    timeout=3,
+                )
+
+            if DISCORD_WEBHOOK_URL:
+                requests.post(
+                    DISCORD_WEBHOOK_URL,
+                    json={"content": f"🚨 **Django Error**\n```{short}```"},
+                    timeout=3,
+                )
+        except Exception:
+            pass
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "simple": {"format": "%(levelname)s %(asctime)s %(name)s %(message)s"},
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "simple"},
+        "webhook_error": {
+            "()": WebhookErrorHandler,
+            "level": "ERROR",
+            "formatter": "simple",
+        },
+    },
+    "loggers": {
+        # 500 에러 등 주요 예외가 유입됨
+        "django.request": {
+            "handlers": ["console", "webhook_error"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+    },
+}

@@ -5,6 +5,16 @@ from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import login
+from django.http import HttpResponse
+import time
+
+def crash(request):
+    1/0  # 일부러 500
+    return HttpResponse("ok")
+
+def slow(request):
+    time.sleep(2)  # 느린요청 테스트
+    return HttpResponse("slow ok")
 
 def login_template(request):
     kakao_auth_url = (

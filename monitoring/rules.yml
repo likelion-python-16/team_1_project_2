@@ -1,0 +1,24 @@
+cat > monitoring/rules.yml <<'YAML'
+groups:
+  - name: django.rules
+    rules:
+      - alert: DjangoHttp500
+        expr: increase(django_http_responses_total_by_status_total{status="500"}[5m]) > 0
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "Django 5xx 발생"
+          description: "최근 5분간 5xx 응답 발생"
+
+      - alert: DjangoHighLatencyP95
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(django_http_requests_latency_seconds_by_view_method_bucket[5m])) by (le)
+          ) > 0.5
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: "Django p95 지연 상승"
+          description: "최근 5분 p95 > 0.5s"
+YAML
